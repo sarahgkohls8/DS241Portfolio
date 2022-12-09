@@ -1,5 +1,6 @@
 ---
 title: "airline work"
+author: "Sarah Kohls"
 output: html_notebook
 ---
 
@@ -13,7 +14,7 @@ library(janitor)
 
 ##load in 2022 data
 ```{r}
-thisfile=here("data_raw","DL_SelectFields2022.zip")
+thisfile=here("DL_SelectFields2022.zip")
 
 df2022=read_csv(thisfile) %>% clean_names()
 ```

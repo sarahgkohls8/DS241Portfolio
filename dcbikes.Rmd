@@ -1,5 +1,6 @@
 ---
 title: "bike_rentals"
+author: "Sarah Kohls"
 output: html_document
 date: "2022-10-26"
 ---

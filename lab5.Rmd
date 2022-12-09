@@ -1,6 +1,6 @@
 ---
 title: "Lab 05"
-author: "Joseph White"
+author: "Sarah Kohls"
 date: "10/19/22"
 output: github_document
 ---

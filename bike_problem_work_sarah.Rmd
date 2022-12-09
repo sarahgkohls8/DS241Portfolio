@@ -167,17 +167,9 @@ df_cens=df_cencus %>% select(-moe) %>% spread(variable,estimate)
 
 plot(df_cens)
 
-tm_shape(df_cens) + tm_polygons("median_inc",alpha=0.5)
+#tm_shape(df_cens) + tm_polygons("median_inc",alpha=0.5)
 ```
 
-
-
-Homework for Monday 11/21:
-
-Question to answer:
-- Is peak in bike data actually people going to work or tourists?
-- Are casual riders in the more touristy areas?
-Look at open data dc site, tourist data, could use reverse geo coding to find location of monuments
 
 
 

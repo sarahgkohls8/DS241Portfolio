@@ -1,5 +1,6 @@
 ---
 title: "enrollment"
+author: "Sarah Kohls"
 output: html_notebook
 ---
 
@@ -18,7 +19,7 @@ library(dplyr)
 
 ##load in all data
 ```{r}
-thisfile=here("data_raw","CU_ACAD_DEPT_WHEN_OFF_ENRL_22740.csv")
+thisfile=here("CU_ACAD_DEPT_WHEN_OFF_ENRL_22740.csv")
 
 df_m = read_csv(thisfile) %>% clean_names() %>% distinct()
 ```

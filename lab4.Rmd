@@ -1,6 +1,6 @@
 ---
-title: "Lab 04 - La Quinta is Spanish for next to Denny's, Pt. 1"
-author: "Joseph White"
+title: "Lab 04"
+author: "Sarah Kohls"
 date: "10/16/22"
 output: github_document
 ---

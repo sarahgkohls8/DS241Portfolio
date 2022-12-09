@@ -74,7 +74,7 @@ Observations from the above graphs:
 * February is low (fewer days) and winter.
 
 ```{r}
-thisfile=here("Downloads","DL_SelectFields.zip")
+thisfile=here("DL_SelectFields.zip")
 
 df2019=read_csv(thisfile) %>% clean_names()
 ```

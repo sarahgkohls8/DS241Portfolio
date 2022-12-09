@@ -1,6 +1,6 @@
 ---
 title: "bike_stuff"
-author: "Joseph White"
+author: "Sarah Kohls"
 date: "10/27/22"
 output: github_document
 ---
