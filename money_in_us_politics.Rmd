@@ -1,0 +1,209 @@
+---
+title: "money_in_US_politics"
+author: "Sarah Kohls"
+date: "2022-11-03"
+output: html_document
+---
+
+##Packages
+```{r}
+library(tidyverse)
+library(robotstxt)
+library(rvest)
+library(scales)
+library(dsbox)
+```
+
+##Data collection
+```{r}
+paths_allowed("https://www.opensecrets.org")
+```
+
+##Scraping 2020 contributions
+```{r}
+url_2020 <- "https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020"
+```
+
+##Read the webpage
+```{r}
+page <- read_html(url_2020)
+```
+
+##Scrape
+```{r}
+pac_2020 <- page %>%
+  html_node(".DataTable-Partial") %>%
+  html_table("td", header = TRUE, fill = TRUE) %>%
+  as_tibble()
+```
+
+##Glipmse dataset
+```{r}
+glimpse(pac_2020)
+```
+
+##Number of observations
+```{r}
+nrow(pac_2020)
+```
+
+##Number of variables
+```{r}
+ncol(pac_2020)
+```
+
+##Separate country and parent
+```{r}
+pac_all_raw <- pac_all_raw %>%
+  separate(country_parent, into = c("country", "parent"), sep = "/", extra = "merge")
+```
+
+##Create function to convert monetary values to numeric
+```{r}
+parse_currency <- function(x){
+  x %>% 
+    str_remove("\\$") %>%
+    str_remove_all(",") %>%
+    as.numeric()
+}
+```
+
+##Use the function
+```{r}
+pac_all <- pac_all_raw %>%
+  mutate(
+    total = parse_currency(total),
+    dems = parse_currency(dems),
+    repubs = parse_currency(repubs)
+  )
+```
+
+##Glimpse the cleaned data
+```{r}
+glimpse(pac_all)
+```
+
+##Data visualization
+```{r}
+pac_all %>%
+  filter(country %in% c("Canada", "UK")) %>%
+  group_by(country, year) %>%
+  summarise(tot = sum(total), .groups = "drop") %>%
+  ggplot(aes(x = year, y = tot, group = country, color = country)) +
+  geom_line()
+```
+
+##Build plot to show contribution to US politics from UK-Connected PACs
+
+##Filter
+```{r}
+pac_all %>%
+  filter(country == "UK")
+```
+
+##Calculate total contributions
+```{r}
+pac_all %>%
+  filter(country == "UK") %>%
+  group_by(year) %>%
+  summarise(
+    Democrat = sum(dems),
+    Republican = sum(repubs),
+    .groups = "drop"
+  )
+```
+
+##Pivoting
+```{r}
+pac_all %>%
+  filter(country == "UK") %>%
+  group_by(year) %>%
+  summarise(
+    Democrat = sum(dems),
+    Republican = sum(repubs),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(Democrat, Republican), 
+    names_to = "party", 
+    values_to = "amount"
+    )
+```
+
+##Save as new data frame
+```{r}
+pac_all_final <- pac_all %>%
+  filter(country == "UK") %>%
+  group_by(year) %>%
+  summarise(
+    Democrat = sum(dems),
+    Republican = sum(repubs),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(Democrat, Republican), 
+    names_to = "party", 
+    values_to = "amount"
+    )
+```
+
+##Plot
+```{r}
+pac_all_final %>%
+  ggplot(mapping = aes(x = year, y = amount, color = party)) +
+  geom_line()
+```
+
+##Change party colors
+```{r}
+pac_all_final %>%
+  ggplot(mapping = aes(x = year, y = amount, color = party)) +
+  geom_line() +
+  scale_color_manual(values = c("blue", "red"))
+```
+
+##Dollar formatting
+```{r}
+pac_all_final %>%
+  ggplot(mapping = aes(x = year, y = amount, color = party)) +
+  geom_line() +
+  scale_color_manual(values = c("blue", "red")) +
+  scale_y_continuous(labels = label_dollar(scale = 0.000001, suffix = "M"))
+```
+
+##Descriptive labels
+```{r}
+pac_all_final %>%
+  ggplot(mapping = aes(x = year, y = amount, color = party)) +
+  geom_line() +
+  scale_color_manual(values = c("blue", "red")) +
+  scale_y_continuous(labels = label_dollar(scale = 0.000001, suffix = "M")) +
+  labs(
+    x = "Year",
+    y = "Amount",
+    color = "Party",
+    title = "Contribution to US politics from UK-Connected PACs",
+    subtitle = "By party, over time"
+  ) 
+```
+
+##Minimal theme
+```{r}
+pac_all_final %>%
+  ggplot(mapping = aes(x = year, y = amount, color = party)) +
+  geom_line() +
+  scale_color_manual(values = c("blue", "red")) +
+  scale_y_continuous(labels = label_dollar(scale = 0.000001, suffix = "M")) +
+  labs(
+    x = "Year",
+    y = "Amount",
+    color = "Party",
+    title = "Contribution to US politics from UK-Connected PACs",
+    subtitle = "By party, over time"
+  ) +
+  theme_minimal()
+```
+
+##Plot is finished
+##Finished intro to web scraping
+

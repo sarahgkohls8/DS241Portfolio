@@ -1,0 +1,127 @@
+---
+title: "Lab 04 - La Quinta is Spanish for next to Denny's, Pt. 1"
+author: "Joseph White"
+date: "10/16/22"
+output: github_document
+---
+
+
+### Load packages and data
+
+```{r load-packages, message = FALSE}
+library(tidyverse) 
+library(dsbox)
+```
+
+```{r load-data, message = FALSE}
+states <- read_csv("states.csv")
+```
+
+### Exercise 1
+
+```{r}
+nrow(dennys)
+ncol(dennys)
+view(dennys)
+```
+rows = 1643
+columns = 6
+columns -> address city state zip latitude longitude
+each row is a specific location
+
+### Exercise 2
+
+```{r}
+nrow(laquinta)
+ncol(laquinta)
+view(laquinta)
+```
+rows = 909
+columns = 6
+columns -> address city state zip latitude longitude
+each row is a specific La Quinta location
+
+### Exercise 3
+
+No out of country dennys
+There is out of country La Quinta... chile, columbia etc
+
+### Exercise 4
+
+```{r}
+view(dennys)
+view(laquinta)
+```
+we could use the filter function on the data to find out of country locations
+
+
+### Exercise 5
+
+```{r}
+dennys %>%
+  filter(!(state %in% states$abbreviation))
+```
+no locations outside the US for dennys
+
+### Exercise 6
+```{r}
+dennys %>%
+  mutate(country = "United States")
+```
+
+## Exercise 7
+```{r}
+laquinta %>%
+  filter(!(state %in% states$abbreviation))
+```
+mexico
+colombia
+Canada
+chile
+
+##exercise 8
+```{r}
+laquinta %>%
+  mutate(country = case_when(
+    state %in% state.abb     ~ "United States",
+    state %in% c("ON", "BC") ~ "Canada",
+    state == "ANT"           ~ "Colombia",
+    state == "MEX" ~ "Mexico",
+    state == "CHI" ~ "Chile"
+  ))
+
+```
+```{r}
+laquinta <- laquinta %>%
+  filter(state %in% state.abb)
+```
+
+
+## exercise 9
+```{r}
+dennys %>%
+  count(state) %>%
+  inner_join(states, by = c("state" = "abbreviation"))
+```
+California has the most dennys, Delaware has the least
+
+```{r}
+laquinta %>%
+  count(state) %>%
+  inner_join(states, by = c("state" = "abbreviation"))
+```
+Texas has the most Laquintas, Maine has the least
+
+##Exerice 10
+```{r}
+dennys <- dennys %>%
+  mutate(establishment = "Denny's")
+laquinta <- laquinta %>%
+  mutate(establishment = "La Quinta")
+
+dn_lq <- bind_rows(dennys, laquinta)
+
+ggplot(dn_lq, mapping = aes(x = longitude, y = latitude, color = establishment)) +
+  geom_point()
+```
+

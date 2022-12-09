@@ -1,0 +1,67 @@
+---
+title: "Bikeshare practice"
+author: "Sarah Kohls"
+date: "2022-11-07"
+output: html_document
+---
+##Load Packages
+```{r}
+library(tidyverse) 
+library(dsbox)
+library(lubridate)
+library(ggplot2)
+library(janitor)
+library(here)
+
+install.packages("gbfs")
+library(gbfs)
+```
+
+##Grab station information and return it as a dataframe
+```{r}
+station_info <- get_station_information("https://gbfs.biketownpdx.com/gbfs/gbfs.json")
+glimpse(station_info)
+```
+
+##Grab current capacity at each station and return it as a dataframe
+```{r}
+station_status <- get_station_status("https://gbfs.biketownpdx.com/gbfs/gbfs.json")
+glimpse(station_status)
+```
+
+##Full join these two datasets on station_id 
+```{r}
+stations <- full_join(station_info, station_status, by = "station_id") %>%
+  select(id = station_id, lon, lat, num_bikes_available, num_docks_available) %>%
+  mutate(type = "docked")
+```
+
+##Grab data on free bike status and save as a dataframe
+```{r}
+free_bikes <- get_free_bike_status("https://gbfs.biketownpdx.com/gbfs/gbfs.json", output = "return") %>%
+  select(id = bike_id, lon, lat) %>%
+  mutate(num_bikes_available = 1, num_docks_available = NA, type = "free")
+```
+
+##Row bind stationed and free bike info
+```{r}
+bike_data_full <- bind_rows(stations, free_bikes)
+```
+
+##Plotting
+```{r}
+bike_plot <- bike_data_full %>% 
+  filter(num_bikes_available > 0) %>%
+  ggplot() + 
+    aes(x = lon, y = lat, size = num_bikes_available, col = type) + 
+    geom_point() + 
+    theme_minimal() + 
+    scale_color_brewer(type = "qual")
+```
+
+```{r}
+bike_plot
+```
+
+
+

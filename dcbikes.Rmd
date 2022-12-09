@@ -1,0 +1,256 @@
+---
+title: "bike_rentals"
+output: html_document
+date: "2022-10-26"
+---
+##Load Packages
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(dsbox)
+```
+
+##Recode season variable to be a factor
+```{r}
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    season = case_when(
+      season == 1 ~ "winter",
+      season == 2 ~ "spring",
+      season == 3 ~ "summer",
+      season == 4 ~ "fall"
+      ),
+    season = fct_relevel(season, "spring", "summer", "fall", "winter")
+  )
+```
+
+##Recode holiday and workingday to be factors
+```{r}
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    holiday = ifelse(holiday == 0, "no", "yes"),      
+    holiday = fct_relevel(holiday, "no", "yes"),    
+    workingday = ifelse(workingday == 0, "no", "yes"),
+    workingday = fct_relevel(workingday, "no", "yes")
+  )
+```
+
+##Recode year variable to be a factor
+```{r}
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    yr = ifelse(yr == 0, "2011", "2012"),
+    yr = fct_relevel(yr, "2011", "2012")
+  )
+```
+
+##Recode weathersit variable
+```{r}
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    weathersit = case_when(
+      weathersit == 1 ~ "clear",
+      weathersit == 2 ~ "mist",
+      weathersit == 3 ~ "light precipitation",
+      weathersit == 4 ~ "heavy precipitation"
+    ),
+    weathersit = fct_relevel(weathersit, "clear", "mist", "light precipitation", "heavy precipitation")
+  )
+```
+
+##Create raw values for temperature, humidity, and windspeed
+```{r}
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    temperature_raw = temp * 41,
+    feeling_temperature_raw = atemp * 50,
+    humidity_raw = hum * 100,
+    windspeed_raw = windspeed * 67
+  )
+```
+
+##Check cnt variable
+```{r}
+dcbikeshare %>%
+  mutate(cas_plus_reg = casual + registered) %>%
+  summarise(all_zero = all(cas_plus_reg == cnt))
+```
+
+##Visualization
+```{r}
+dcbikeshare %>%
+  ggplot(mapping = aes(x = dteday, y = cnt, color = feeling_temperature_raw)) +
+    geom_point(alpha = 0.7) +
+    labs(
+      title = "Bike rentals in DC, 2011 and 2012",
+      subtitle = "Warmer temperatures associated with more bike rentals",
+      x = "Date",
+      y = "Bike rentals",
+      color = "Temperature (C)"
+    ) +
+  theme_minimal()
+```
+
+##Bike rentals vs temperature
+```{r}
+cnt_tmp <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ temperature_raw, data = dcbikeshare)
+cnt_tmp %>%
+  tidy()
+```
+##Slope of model is approximately 162.
+##For each additional degree celcius, we can expect bike rentals to increase by 162.
+##The model has the intercept at approximately 1215.
+##At a day w/ temp 0 degrees celcius, there will be about 1215 bike rentals. 
+
+##R squared of model
+```{r}
+glance(cnt_tmp)$r.squared
+```
+##R-squared meaning: 39.4% of variability in number for total daily bike rental is explained by temperature.
+
+##Bike rentals vs feeling temperature
+```{r}
+cnt_atmp <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ feeling_temperature_raw, data = dcbikeshare)
+cnt_atmp %>%
+  tidy()
+```
+##Model has intercept at about 946.
+##Therefore on a day with feeling temp of 0 degrees celcius there will be about 946 bike rentals.
+##Slope of model is about 150.
+##Therefore for each additional degree in feeling temp, bike rentals will increase by about 150.
+
+##R-sqaured of the model
+```{r}
+glance(cnt_atmp)$r.squared
+```
+##R-squared meaning: 39.8% of variability in number of total number of daily bike rentals is explained by feeling temperature.
+
+##Feeling temperature is the better predictor since R-squared value is higher. 
+
+```{r}
+dcbikeshare
+```
+
+
+##Full model
+```{r}
+cnt_full <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + yr + holiday + workingday + weathersit +
+        temperature_raw + feeling_temperature_raw + humidity_raw + 
+        windspeed_raw + feeling_temperature_raw * holiday, 
+      data = dcbikeshare)
+tidy(cnt_full)
+```
+
+##R-squared of the model
+```{r}
+glance(cnt_full)$adj.r.squared
+```
+##Intercept for non-holidays is higher than for holidays.
+##Slope for feeling temp is steeper for holidays than for non-holidays
+
+##Bike rentals highest in Fall, lowest in Winter.
+
+##Backward selection
+
+##Model w/out season
+```{r}
+rm_season <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ yr + holiday + workingday + weathersit +
+        temperature_raw + feeling_temperature_raw + humidity_raw +
+        windspeed_raw + feeling_temperature_raw * holiday, 
+      data = dcbikeshare)
+glance(rm_season)$adj.r.squared
+```
+
+##Model w/out year
+```{r}
+rm_year <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + holiday + workingday + weathersit +
+        temperature_raw + feeling_temperature_raw + humidity_raw +
+        windspeed_raw + feeling_temperature_raw * holiday, data = dcbikeshare)
+glance(rm_year)$adj.r.squared
+```
+
+##Model w/out holiday variable, removed interaction effect w/ holiday & feeling_temp_raw
+```{r}
+rm_holiday <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + yr + workingday + weathersit +
+        temperature_raw + feeling_temperature_raw + humidity_raw +
+        windspeed_raw + feeling_temperature_raw, data = dcbikeshare)
+glance(rm_holiday)$adj.r.squared
+```
+
+##Model w/out workingday variable
+```{r}
+rm_workingday <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + yr + holiday + weathersit +
+        temperature_raw + feeling_temperature_raw + humidity_raw +
+        windspeed_raw + feeling_temperature_raw * holiday, data = dcbikeshare)
+glance(rm_workingday)$adj.r.squared
+```
+
+##Model w/out weatersit variable
+```{r}
+rm_weathersit<- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + workingday + yr + holiday +
+        temperature_raw + feeling_temperature_raw + humidity_raw +
+        windspeed_raw + feeling_temperature_raw * holiday, data = dcbikeshare)
+glance(rm_weathersit)$adj.r.squared
+```
+
+##Model w/out temperature_raw variable
+```{r}
+rm_temp_raw <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + weathersit + workingday + yr + holiday + feeling_temperature_raw + humidity_raw +
+        windspeed_raw + feeling_temperature_raw * holiday, data = dcbikeshare)
+glance(rm_temp_raw)$adj.r.squared
+```
+
+##Model w/out feeling_temperature_raw & removed interaction effect between holiday and feeling_temperature_raw
+```{r}
+rm_feeltemp_raw <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + temperature_raw + weathersit + workingday + yr + holiday + humidity_raw +
+        windspeed_raw, data = dcbikeshare)
+glance(rm_feeltemp_raw)$adj.r.squared
+```
+
+##Model w/out humidity_raw variable
+```{r}
+rm_humidity_raw <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + temperature_raw + weathersit + workingday + yr + holiday + feeling_temperature_raw +
+        windspeed_raw + feeling_temperature_raw * holiday, data = dcbikeshare)
+glance(rm_humidity_raw)$adj.r.squared
+```
+
+##Model w/out windspeed_raw variable
+```{r}
+rm_windspeed_raw <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + humidity_raw + temperature_raw + weathersit + workingday + yr + holiday + feeling_temperature_raw + feeling_temperature_raw * holiday, data = dcbikeshare)
+glance(rm_windspeed_raw)$adj.r.squared
+```
+
+##Model w/out interaction effect between holiday & feeling_temperature_raw
+```{r}
+rm_interaction <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + windspeed_raw + humidity_raw + temperature_raw + weathersit + 
+  workingday + yr + holiday + feeling_temperature_raw, data = dcbikeshare)
+glance(rm_interaction)$adj.r.squared
+```
+
+##Conclusion: None of the modified models gives any improvement over the original full model

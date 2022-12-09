@@ -1,0 +1,121 @@
+---
+title: "LAB 4 ML"
+author: "Michael Lanfear"
+date: "2022-10-17"
+output: html_document
+---
+### Load packages and data
+
+```{r load-packages, message = FALSE}
+library(tidyverse) 
+library(devtools)
+library(dplyr)
+library(dsbox) 
+```
+```{r load-data, message = FALSE}
+states <- read_csv("states.csv")
+```
+
+### Exercise 1
+```{r}
+nrow(dennys)
+ncol(dennys)
+view(dennys)
+```
+
+rows -> 1643
+columns -> 6
+
+Columns are address, city, state, zip, latitude, and longitude
+Each row is a specific Dennys location
+
+### Exercise 2
+
+```{r}
+nrow(laquinta)
+ncol(laquinta)
+view(laquinta)
+```
+
+rows -> 909
+columns -> 6
+
+The columns are the address city state zip latitude longitude
+Each row of the data is a specific La Quinta location from around the world
+
+### Exercise 3
+
+La Quinta has locations outside the US including Mexico Canada and Columbia to name a few
+There is no out of US Dennys
+
+### Exercise 4
+
+```{r}
+view(laquinta)
+view(dennys)
+```
+
+Use the filter function to find the out of country locations by the longitude and latitude columns
+
+### Exercise 5
+```{r}
+dennys %>%
+  filter(!(state %in% states$abbreviation))
+```
+
+There are no locations outside of the US for Dennys
+
+### Exercise 6
+
+```{r}
+dennys %>%
+  mutate(country = "United States")
+```
+
+### Exercise 7
+
+```{r}
+laquinta %>%
+  filter(!(state %in% states$abbreviation))
+```
+
+Mexico
+Canada
+Columbia
+
+### Exercise 8
+
+```{r}
+laquinta %>%
+  mutate(country = case_when(
+    state %in% state.abb     ~ "United States",
+    state %in% c("ON", "BC") ~ "Canada",
+    state == "ANT"           ~ "Colombia",
+    state == "MEX"           ~ "Mexico"
+  ))
+```
+
+```{r}
+laquinta <- laquinta %>%
+  filter(state %in% state.abb)
+```
+
+### Exercise 9
+
+```{r}
+dennys %>%
+  count(state) %>%
+  inner_join(states, by = c("state" = "abbreviation"))
+```
+
+California has the most amount of Dennys
+Delaware has the least amount of Dennys
+
+```{r}
+laquinta %>%
+  count(state) %>%
+  inner_join(states, by = c("state" = "abbreviation"))
+```
+
+Texas has the most amount La Quintas 
+Maine has the least amount of La Quintas

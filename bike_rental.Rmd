@@ -1,0 +1,129 @@
+---
+title: "bike_rental"
+author: "Joseph White"
+date: "10/25/22"
+output: github_document
+---
+
+## load packages
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(dsbox)
+```
+
+## summary
+```{r}
+# summary(dcbikeshare)
+view(dcbikeshare)
+```
+
+## recode
+```{r}
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    season = case_when(
+      season == 1 ~ "winter",
+      season == 2 ~ "spring",
+      season == 3 ~ "summer",
+      season == 4 ~ "fall"
+    ),
+    season = fct_relevel(season, "spring", "summer", "fall", "winter")
+  )
+
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    holiday = ifelse(holiday == 0, "no", "yes"),      
+    holiday = fct_relevel(holiday, "no", "yes"),    
+    workingday = ifelse(workingday == 0, "no", "yes"),
+    workingday = fct_relevel(workingday, "no", "yes")
+  )
+
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    yr = ifelse(yr == 0, "2011", "2012"),
+    yr = fct_relevel(yr, "2011", "2012")
+  )
+
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    weathersit = case_when(
+      weathersit == 1 ~ "clear",
+      weathersit == 2 ~ "mist",
+      weathersit == 3 ~ "light precipitation",
+      weathersit == 4 ~ "heavy precipitation"
+    ),
+    weathersit = fct_relevel(weathersit, "clear", "mist", "light precipitation", "heavy precipitation")
+  )
+```
+
+## create new variables
+```{r}
+dcbikeshare <- dcbikeshare %>%
+  mutate(
+    temperature_raw = temp * 41,
+    feeling_temperature_raw = atemp * 50,
+    humidity_raw = hum * 100,
+    windspeed_raw = windspeed * 67
+  )
+
+dcbikeshare %>%
+  mutate(cas_plus_reg = casual + registered) %>%
+  summarise(all_zero = all(cas_plus_reg == cnt))
+```
+
+## visualize
+```{r}
+dcbikeshare %>%
+  ggplot(mapping = aes(x = dteday, y = cnt, color = feeling_temperature_raw)) +
+    geom_point(alpha = 0.7) +
+    labs(
+      title = "Bike rentals in DC, 2011 and 2012",
+      subtitle = "Warmer temperatures associated with more bike rentals",
+      x = "Date",
+      y = "Bike rentals",
+      color = "Temperature (C)"
+    ) +
+  theme_minimal()
+```
+
+```{r}
+cnt_tmp <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ temperature_raw, data = dcbikeshare)
+cnt_tmp %>%
+  tidy()
+
+glance(cnt_tmp)$r.squared
+```
+
+```{r}
+cnt_atmp <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ feeling_temperature_raw, data = dcbikeshare)
+cnt_atmp %>%
+  tidy()
+
+glance(cnt_atmp)$r.squared
+```
+
+```{r}
+cnt_full <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season + yr + holiday + workingday + weathersit +
+        temperature_raw + feeling_temperature_raw + humidity_raw +
+        windspeed_raw + feeling_temperature_raw * holiday, 
+      data = dcbikeshare)
+tidy(cnt_full)
+
+glance(cnt_full)$adj.r.squared
+```
+
+## backward selection
+```{r}
+rm_season <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(cnt ~ season, data = cnt_full)
+glance(cnt_full)$adj.r.squared
+```
+

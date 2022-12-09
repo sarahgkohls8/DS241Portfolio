@@ -1,0 +1,28 @@
+---
+title: "airline work"
+output: html_notebook
+---
+
+##loading packages
+```{r}
+library(tidyverse)
+library(nycflights13)
+library(here)
+library(janitor)
+```
+
+##load in 2022 data
+```{r}
+thisfile=here("data_raw","DL_SelectFields2022.zip")
+
+df2022=read_csv(thisfile) %>% clean_names()
+```
+
+##myspace
+```{r}
+df1 <- df2022 %>% filter(passengers>0, origin =="LGA", unique_carrier_name == "Spirit Air Lines")
+
+df1 %>% ggplot(aes(month,fill=dest)) + geom_bar()+facet_wrap(~dest)
+```
+
+

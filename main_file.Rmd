@@ -1,0 +1,53 @@
+---
+title: "airline work"
+output: html_notebook
+---
+
+##loading packages
+```{r}
+library(tidyverse)
+library(nycflights13)
+library(here)
+library(janitor)
+```
+
+##load in all data
+```{r}
+thisfile=here("data_raw","DL_SelectFields2022.zip")
+df2022=read_csv(thisfile) %>% clean_names()
+
+thisfile=here("data_raw","airline_data_2021.zip")
+df2021=read_csv(thisfile) %>% clean_names()
+
+thisfile=here("data_raw","DL_SelectFields_2020.zip")
+df2020=read_csv(thisfile) %>% clean_names()
+
+thisfile=here("data_raw","airline_data_2018.zip")
+df2018=read_csv(thisfile) %>% clean_names()
+
+thisfile=here("data_raw","DL_SelectFields_2017.zip")
+df2017=read_csv(thisfile) %>% clean_names()
+```
+
+##myspace
+```{r}
+df1 <- df2022 %>% filter(passengers>0, origin =="LGA", unique_carrier_name == "Spirit Air Lines")
+
+df1 %>% ggplot(aes(month)) + geom_bar()
+```
+##months as one continuous
+```{r}
+##df2018 %>% if(month==1){replace(1,11)}else if(month==2){}else if(month==3){}else if(month==4){}else if(month==5){}
+```
+
+
+##Combine data sets (bind_rows)
+```{r}
+df_c <- bind_rows(df2017, df2018, df2020, df2021, df2022)
+```
+
+##create plot
+```{r}
+df_c %>% ggplot(aes(month,weight=seats)) + geom_bar()
+```
+

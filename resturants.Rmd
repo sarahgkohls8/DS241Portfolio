@@ -1,0 +1,116 @@
+---
+title: "rest"
+author: "Joseph White"
+date: "10/21/22"
+output: github_document
+---
+
+### Load packages and data
+
+```{r load-packages, message = FALSE}
+library(tidyverse) 
+library(dsbox)
+```
+
+```{r load-data, message = FALSE}
+restu <- read_csv("FastFoodRestaurants.csv")
+```
+
+```{r}
+lq_ny <- laquinta %>%
+  filter(state == "NY")
+```
+
+```{r}
+mc_ny <- restu %>%
+  filter(province == "NY", name == "McDonald's") %>%
+  slice_sample(n = 56) %>%
+  rename(state = province)
+```
+
+```{r}
+mc_lq_ny <- full_join(mc_ny, lq_ny, by = "state")
+```
+
+
+# make haversine
+```{r}
+haversine <- function(long1, lat1, long2, lat2, round = 3) {
+  # convert to radians
+  long1 = long1 * pi / 180
+  lat1  = lat1  * pi / 180
+  long2 = long2 * pi / 180
+  lat2  = lat2  * pi / 180
+  
+  R = 6371 # Earth mean radius in km
+  
+  a = sin((lat2 - lat1)/2)^2 + cos(lat1) * cos(lat2) * sin((long2 - long1)/2)^2
+  d = R * 2 * asin(sqrt(a))
+  
+  return( round(d,round) ) # distance in km
+}
+```
+
+# calculate distance
+```{r}
+mc_lq_ny = mc_lq_ny %>% mutate(distance = haversine(longitude.x, latitude.x, longitude.y, latitude.y, round = 4))
+```
+
+# create mindist
+```{r}
+mc_lq_ny_mindist <- mc_lq_ny %>%
+  group_by(address.y) %>%
+  summarise(closest = min(distance))
+```
+
+# create visualization
+```{r}
+df_mc <- mc_lq_ny_mindist %>% select(closest) %>% filter(closest < 200)
+boxplot(df_mc, show.names=TRUE)
+```
+
+## compare to dennys
+```{r}
+dn_ny <- dennys %>%
+  filter(state == "NY")
+
+lq_ny <- laquinta %>%
+  filter(state == "NY")
+
+dn_lq_ny <- full_join(dn_ny, lq_ny, by = "state")
+
+dn_lq_ny = dn_lq_ny %>% mutate(distance = haversine(longitude.x, latitude.x, longitude.y, latitude.y, round = 4))
+
+dn_lq_ny_mindist <- dn_lq_ny %>%
+  group_by(address.y) %>%
+  summarise(closest = min(distance))
+```
+
+## visulize dennys la quinta new york
+```{r}
+df_dn <- dn_lq_ny_mindist %>% select(closest)
+boxplot(df_dn, show.names=TRUE)
+```
+
+## show both
+```{r}
+df_dn <- dn_lq_ny_mindist %>% select(closest)
+boxplot(df_dn, show.names=TRUE)
+
+df_mc <- mc_lq_ny_mindist %>% select(closest) %>% filter(closest < 200)
+boxplot(df_mc, show.names=TRUE)
+```
+
+## compare mindist of both dennys and mcdonalds
+```{r}
+lq_mc_dn_ny_join <- full_join(mc_lq_ny_mindist, dn_lq_ny_mindist, by = "address.y")
+```
+
+## plot
+```{r}
+abc = c("closest.x","closest.y")
+
+ggplot(mc_lq_ny_join) +
+geom_boxplot(aes(x=address.y, abc))
+```
+

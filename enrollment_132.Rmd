@@ -1,0 +1,83 @@
+---
+title: "enrollment"
+output: html_notebook
+---
+
+##loading packages
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(readr)
+library(ggplot2)
+library(forecast)
+library(fpp2)
+library(TTR)
+library(dplyr)
+```
+
+##load in all data
+```{r}
+thisfile=here("data_raw","CU_ACAD_DEPT_WHEN_OFF_ENRL_22740.csv")
+
+df_m = read_csv(thisfile) %>% clean_names() %>% distinct()
+```
+
+##transform data
+```{r}
+target <- c("131","132")
+df_1 <- df_m %>% 
+  filter(catalog == target, section <10) %>% 
+  select(catalog, term, term2, tot_enrl, section, title) %>% 
+  mutate(ay = round((term - 4000)/10))
+```
+
+##new df
+```{r}
+df_2 <- df_1 %>%
+  select(ay, tot_enrl, section, catalog, term2) %>%
+  filter(catalog == "131") %>%
+  separate(term2, c("semester","year"),sep = " ") %>%
+  rename(tot_enrl_131 = tot_enrl) 
+## %>% filter(!row_number() %in% c(10))
+ 
+df_3 <- df_1 %>%
+  select(ay, tot_enrl, section, catalog, term2) %>%
+  filter(catalog == "132") %>%
+  separate(term2, c("semester","year"),sep = " ") %>%
+  rename(tot_enrl_132 = tot_enrl) 
+## %>% filter(!row_number() %in% c(14))
+
+
+ggplot(df_2, aes(year, tot_enrl_131)) +geom_point()
+ggplot(df_3, aes(year, tot_enrl_132)) +geom_point()
+
+```
+
+
+##bind df_1 and df_2
+```{r}
+df_4 <- merge(df_2, df_3,by="year")
+
+ggplot(df_4, aes(tot_enrl_131, tot_enrl_132)) + geom_point()
+```
+
+##linear regression
+```{r}
+mult.reg.enrl131 <- lm(tot_enrl_131 ~ ay + semester, data = df_2)
+summary(mult.reg.enrl131)
+
+mult.reg.enrl132 <- lm(tot_enrl_132 ~ ay + section, data = df_3)
+summary(mult.reg.enrl132)
+```
+
+## finding values
+```{r}
+##df_3[13,2]
+Spring_2022_132 = df_3[13,1]*-1.067 + +5.562+53.416
+Spring_2022_132
+
+df_3[14,2]=Spring_2022_132
+ggplot(df_3, aes(year, tot_enrl_132)) +geom_point()
+```
+

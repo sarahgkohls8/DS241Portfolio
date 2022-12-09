@@ -1,0 +1,155 @@
+---
+title: "Lab 05"
+author: "Joseph White"
+date: "10/19/22"
+output: github_document
+---
+
+### Load packages and data
+
+```{r load-packages, message = FALSE}
+library(tidyverse) 
+library(dsbox)
+```
+
+
+## ex 1
+```{r}
+dn_ak <- dennys %>%
+  filter(state == "AK")
+nrow(dn_ak)
+```
+
+## ex 2
+```{r}
+lq_ak <- laquinta %>%
+  filter(state == "AK")
+nrow(lq_ak)
+```
+
+
+##ex 3
+```{r}
+dn_lq_ak <- full_join(dn_ak, lq_ak, by = "state")
+dn_lq_ak
+```
+
+6 distances that need to be calcullated
+
+## ex 4
+```{r}
+summary(dn_lq_ak)
+nrow(dn_lq_ak)
+```
+
+There are 11 varaibles with 6 observations each
+variables names: address.x, city.x, state, zip.x, longitude.x, latitude.x, address.y, city.y, zip.y, longitude.y, latitude.y
+
+## exercise 5
+we should use the mutate function?
+
+#exercise 6
+```{r}
+haversine <- function(long1, lat1, long2, lat2, round = 3) {
+  # convert to radians
+  long1 = long1 * pi / 180
+  lat1  = lat1  * pi / 180
+  long2 = long2 * pi / 180
+  lat2  = lat2  * pi / 180
+  
+  R = 6371 # Earth mean radius in km
+  
+  a = sin((lat2 - lat1)/2)^2 + cos(lat1) * cos(lat2) * sin((long2 - long1)/2)^2
+  d = R * 2 * asin(sqrt(a))
+  
+  return( round(d,round) ) # distance in km
+}
+```
+
+```{r}
+dn_lq_ak = dn_lq_ak %>% mutate(distance = haversine(longitude.x, latitude.x, longitude.y, latitude.y, round = 4))
+```
+
+# exercise 7
+```{r}
+dn_lq_ak_mindist <- dn_lq_ak %>%
+  group_by(address.x) %>%
+  summarise(closest = min(distance))
+```
+
+# exercise 8
+```{r}
+df <- dn_lq_ak_mindist %>% select(closest)
+boxplot(df, show.names=TRUE)
+```
+
+# exercise 9
+```{r}
+dn_nc <- dennys %>%
+  filter(state == "NC")
+
+lq_nc <- laquinta %>%
+  filter(state == "NC")
+
+dn_lq_nc <- full_join(dn_nc, lq_nc, by = "state")
+
+dn_lq_nc = dn_lq_nc %>% mutate(distance = haversine(longitude.x, latitude.x, longitude.y, latitude.y, round = 4))
+
+dn_lq_nc_mindist <- dn_lq_nc %>%
+  group_by(address.x) %>%
+  summarise(closest = min(distance))
+```
+
+```{r}
+df <- dn_lq_nc_mindist %>% select(closest)
+boxplot(df, show.names=TRUE)
+```
+
+# exercise 10
+```{r}
+dn_tx <- dennys %>%
+  filter(state == "TX")
+
+lq_tx <- laquinta %>%
+  filter(state == "TX")
+
+dn_lq_tx <- full_join(dn_tx, lq_tx, by = "state")
+
+dn_lq_tx = dn_lq_tx %>% mutate(distance = haversine(longitude.x, latitude.x, longitude.y, latitude.y, round = 4))
+
+dn_lq_tx_mindist <- dn_lq_tx %>%
+  group_by(address.x) %>%
+  summarise(closest = min(distance))
+```
+
+```{r}
+df <- dn_lq_tx_mindist %>% select(closest)
+boxplot(df, show.names=TRUE)
+```
+
+
+# exercise 11
+```{r}
+dn_me <- dennys %>%
+  filter(state == "ME")
+
+lq_me <- laquinta %>%
+  filter(state == "ME")
+
+dn_lq_me <- full_join(dn_me, lq_me, by = "state")
+
+dn_lq_me = dn_lq_me %>% mutate(distance = haversine(longitude.x, latitude.x, longitude.y, latitude.y, round = 4))
+
+dn_lq_me_mindist <- dn_lq_me %>%
+  group_by(address.x) %>%
+  summarise(closest = min(distance))
+```
+
+```{r}
+df <- dn_lq_me_mindist %>% select(closest)
+boxplot(df, show.names=TRUE)
+```
+
+# exercise 12
+Mitch Hedberg’s joke held true the most for Alaska. We decided so because the distribution of the closest distances is most consistently low and there are less outliers than Texas
+

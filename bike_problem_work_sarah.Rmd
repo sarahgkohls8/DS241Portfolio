@@ -1,0 +1,184 @@
+---
+title: "bike_problem_work_sarah"
+author: "Sarah Kohls"
+date: "2022-11-18"
+output: html_document
+---
+
+11/17/22 Work on bike problem
+
+Load packages
+```{r}
+library(knitr)
+library(tidyverse)
+library(janitor)
+library(lubridate) 
+library(here) 
+library(sf)
+library(tmap)
+library(tidycensus)
+library(dsbox)
+library(ggplot2)
+library(gbfs)
+library(dplyr)
+library(stringr)
+library(nabor)
+```
+
+
+```{r}
+bikeshare = read_csv(here("202209-capitalbikeshare-tripdata.csv")) %>%
+  clean_names() %>% select(ride_id, start_lat, start_lng, end_lat, end_lng) %>%
+  filter(!is.na(end_lat), !is.na(end_lng))
+
+census_api_key("74bc918a78c720321d756d915a6094c8b101b31f")
+
+census=get_acs(geography = "tract",
+               variables=c("pop"="B01001_001"),
+               state="DC",geometry=TRUE,year=2018)
+```
+
+Count number of rides starting and ending in each census tract:
+```{r}
+census_wide = census %>% select(-moe) %>% spread(variable, estimate) %>%
+  select(GEOID, pop, geometry) %>% st_transform(4326)
+
+bikeshare_start_pts = bikeshare %>% select(start_lng, start_lat) %>%
+  st_as_sf(coords=c("start_lng", "start_lat"), crs=st_crs(census_wide))
+
+bike_census = census_wide %>% mutate(start_count = 
+                                       lengths(st_intersects(., bikeshare_start_pts)))
+
+bikeshare_end_pts = bikeshare %>% select(end_lng, end_lat) %>%
+  st_as_sf(coords=c("end_lng", "end_lat"), crs=st_crs(census_wide))
+
+bike_census = bike_census %>% mutate(end_count = 
+                                       lengths(st_intersects(., bikeshare_start_pts)))
+```
+
+Plot:
+```{r}
+tmap_mode("view")
+tm_shape(bike_census) + tm_polygons(c("pop", "start_count", "end_count"), alpha=0.5)
+```
+
+Normalized for population:
+```{r}
+bike_census_pop = bike_census %>% mutate(start_rate = start_count / pop,
+                                         end_rate = end_count / pop)
+
+tm_shape(bike_census_pop) + tm_polygons(c("start_rate", "end_rate"), alpha=0.5)
+```
+
+Filtered out huge popular region b/c messed up visualization:
+```{r}
+bike_census_pop = bike_census %>% mutate(start_rate = start_count / pop,
+                                         end_rate = end_count / pop) %>%
+  filter(GEOID != 11001006202)
+
+tm_shape(bike_census_pop) + tm_polygons(c("start_rate", "end_rate"), alpha=0.5)
+```
+
+11/17/22 - Following Skufca's example from class:
+
+Make data easily readable
+```{r}
+neigh=st_read(here("DC_Health_Planning_Neighborhoods.geojson")) %>% clean_names() %>%
+  mutate(shapearea=st_area(geometry))
+class(neigh)
+```
+
+Read basic Sep2022 data
+```{r}
+bike_data <- read_csv("202209-capitalbikeshare-tripdata.csv") %>% clean_names()
+```
+
+Filter to rides on Sep 1st to give a smaller dataset
+```{r}
+bike_data_use <- bike_data %>% 
+  separate(started_at, c("date", "time"), " ") %>%
+  separate(time, c("hour","minute","second"), ":") %>%
+  mutate(minu = as.numeric(hour)*60 + as.numeric(minute))%>%
+  separate(date, c("year","month","day"), "-") %>%
+  filter(day == "01")
+```
+
+Create an sf object from the bikedata
+```{r}
+bike_data_sf=st_as_sf(bike_data_use, coords = c("start_lng", "start_lat"),
+                      crs = 4326)
+```
+
+Join datasets
+```{r}
+neigh_temp=st_join(bike_data_sf,neigh,join = st_within) %>% group_by(code) %>%
+  summarise(n=n()) %>%
+  as_tibble() %>% select(-geometry)
+
+neigh2=neigh %>% left_join(neigh_temp)
+```
+
+```{r}
+tmap_mode("view")
+
+tm_shape(neigh2) + tm_polygons("n", alpha = 0.5, n = 4, style = "quantile")
+```
+
+Joining with other spatial data
+```{r}
+census_api_key("74bc918a78c720321d756d915a6094c8b101b31f")
+
+v20 = load_variables(2020,"acs5",cache=TRUE)
+```
+
+Get some data, old code:
+```{r}
+df_cencus=get_acs(geography = "tract",
+                  variables=c("median_inc"="B06011_001",
+                              "pop"="B01001_001",
+                              "pop_black"="B02009_001"),
+                  state="DC",geometry=TRUE,year=2018)
+```
+
+New code, trying to get at daytime population:
+```{r}
+df_cencus=get_acs(geography = "tract",
+                  variables=c(
+                    "total_pop"="B01003_001",
+                    "worker_working"="08406_001",
+                    "worker_living"="B08301_001"),
+                  state="DC",geometry=TRUE,year=2020)
+```
+
+```{r}
+dfc2=get_acs(geography = "tract",
+             table="B08406",
+             state="DC",geometry=TRUE,year=2020)
+```
+
+```{r}
+class(df_cencus)
+plot(df_cencus)
+```
+
+It's in long format -> make it wide
+```{r}
+df_cens=df_cencus %>% select(-moe) %>% spread(variable,estimate)
+
+plot(df_cens)
+
+tm_shape(df_cens) + tm_polygons("median_inc",alpha=0.5)
+```
+
+
+
+Homework for Monday 11/21:
+
+Question to answer:
+- Is peak in bike data actually people going to work or tourists?
+- Are casual riders in the more touristy areas?
+Look at open data dc site, tourist data, could use reverse geo coding to find location of monuments
+
+
+
+
